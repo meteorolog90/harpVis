@@ -13,6 +13,7 @@
 #'   e.g. \code{filter_by = vars(det_model == "be13", fctime == 0)}.
 #'
 #' @export
+
 plot_spatial_verif <- function(
   verif_data,
   score,
@@ -22,7 +23,7 @@ plot_spatial_verif <- function(
   score_quo   <- rlang::enquo(score)
   score_name <- rlang::quo_name(score_quo)
 
-
+ 
   # the column(s) to filter data for before plotting
   filter_by_err  <- paste("filter_by must be wrapped in vars and unquoted,\n",
     "e.g. filter_by = vars(leadtime == 12, threshold == 280).")
@@ -91,16 +92,28 @@ plot_spatial_verif <- function(
   # add a title
   # we assume fcdate is a column of YYYYMMDD strings (or integers), not POSIX dates
   if (is.element("fcdate", names(plot_data))) {
+
     bdate <- min(plot_data$fcdate, na.rm=TRUE)
+    bdate <- as.Date(as.character(bdate),"%Y%m%d")
     edate <- max(plot_data$fcdate, na.rm=TRUE)
-  } else {
+    edate <- as.Date(as.character(edate),"%Y%m%d")
+    fcvalues <- c(unique(plot_data$fctime))
+
+} else {
+
     bdate <- NULL
     edate <- NULL
+    fcfirst <- NULL
+    fclast <- NULL
+
   }
-  #
-  plot.title <- sprintf("%s %s\n%s - %s\n%s",
-                        score_name, myModel, bdate, edate, myParam)
-  gg <- gg + ggplot2::labs(title=plot.title)
+  
+  plot.title <- sprintf("%s\n",paste(toupper(score_name),"Diagram",sep = " "), bdate, edate)
+  gg <- gg + ggplot2::labs(title=plot.title, 
+                           subtitle = paste(" MODEL: ", myModel,"\n","PERIOD: ","from", bdate,"to", edate, "\n" ), 
+                           caption = paste("PARAMETER: ", myParam)) +
+             ggplot2::theme(plot.title = element_text(hjust = .5))
+   
 
   # finished
   gg
@@ -120,20 +133,52 @@ plot_sal <- function(plot_data) {
   meanA <- sprintf("A mean = %.04f ", mean(plot_data$A, na.rm=TRUE))
   meanL <- sprintf("L mean = %.04f ", mean(plot_data$L, na.rm=TRUE))
 
-  tfsize <- 3
-  tfam <- "mono" 
+  tab <- matrix(c(meanS,meanA,meanL,medianS,medianA,medianL),ncol=1)
+
+  totalHITS  <- sum(plot_data$hits, na.rm=TRUE)
+  totalMISS  <- sum(plot_data$miss, na.rm=TRUE)
+  totalTOTAL <- sum(plot_data$total, na.rm=TRUE)
+  totalFA    <- sum(plot_data$fa, na.rm=TRUE)
+  totalCN    <- sum(plot_data$cn, na.rm=TRUE)
+
+  totalAC    <- (totalHITS + totalCN)/totalTOTAL
+  totalSR    <- totalHITS/(totalHITS + totalFA)
+  totalBSF   <- (totalHITS + totalFA)/(totalHITS + totalMISS)
+  totalPOD   <- totalHITS/(totalHITS + totalFA)
+  totalFAR   <- totalFA/(totalHITS + totalFA)
+  totalPOFD  <- totalFA/(totalCN + totalFA)
+
+  mytable <- data.frame(ac=totalAC,sr=totalSR,bsf=totalBSF,pod=totalPOD,far=totalFAR,pofd=totalPOFD)%>%
+                mutate(across(where(is.numeric), ~ round(., digits = 2)))
+  colnames(tab) <- 'score'
+  rownames(tab) <- c('meanS','meanA','meanL','medianS','medianA','medianL')
+  tab <- as.table(tab)
+
+  tt1 <- ttheme_default()
+  tt2 <- ttheme_minimal()
+  
+  tfsize <- 3.5
+  tfam <- "mono"
+  
   gg <- ggplot2::ggplot(plot_data, aes(x = S, y = A, colour = plot_data$L))
-  gg <- gg + geom_point(size=5) + 
+  gg <- gg + ggplot2::geom_hline(yintercept = median(plot_data$A, na.rm=TRUE), linetype = "dashed",color = "#8c8c8c") +
+             ggplot2::geom_vline(xintercept = median(plot_data$S, na.rm=TRUE), linetype = "dashed", color = "#8c8c8c") +
+             #ggplot2::annotation_custom(tableGrob(mytable, rows=NULL,theme=tt1), xmin=-2., xmax=-0.5, ymin=-2.5, ymax=-0.99) +
+             ggplot2::annotate(geom = "rect", xmin = quantile(plot_data$S, probs=.25), xmax = quantile(plot_data$S, probs=.75), 
+                                              ymin = quantile(plot_data$A,probs=.25), ymax = quantile(plot_data$A,probs=.75), 
+                                              fill = "gray42", color = "gray70", alpha = 0.1) + 
+             #ggplot2::annotation_custom(tableGrob(mytable, rows=NULL,theme=tt1), xmin=-2., xmax=-0.5, ymin=-2.5, ymax=-0.99) +
+             ggplot2::geom_point(size=5) +
              ggplot2::xlim(-2, 2) + ggplot2::ylim(-2, 2) + 
              ggplot2::labs(y = "A", x = "S", colour="L") +
              ggplot2::scale_colour_gradient2(low = "darkblue", mid = "yellow", high = "red") +
              ggplot2::geom_text(aes(-1.2,2,label = medianS, family=tfam), size=tfsize*1.5, colour="black") + 
              ggplot2::geom_text(aes(-1.2,1.8,label = medianA, family=tfam), size=tfsize*1.5, colour="black") + 
-             ggplot2::geom_text(aes(-1.2,1.6,label = medianL, family=tfam), size=tfsize*1.5, colour="black") + 
-             ggplot2::geom_text(aes(1.2,-1.6,label = meanS, family=tfam), size=tfsize*1.5, colour="black") +  
+             ggplot2::geom_text(aes(-1.215,1.6,label = medianL, family=tfam), size=tfsize*1.5, colour="black") + 
+             ggplot2::geom_text(aes(1.211,-1.6,label = meanS, family=tfam), size=tfsize*1.5, colour="black") +  
              ggplot2::geom_text(aes(1.2,-1.8,label = meanA, family=tfam), size=tfsize*1.5, colour="black") +  
-             ggplot2::geom_text(aes(1.2,-2,label = meanL, family=tfam), size=tfsize*1.5, colour="black")
-
+             ggplot2::geom_text(aes(1.2,-2,label = meanL, family=tfam), size=tfsize*1.5, colour="black")+ 
+             ggplot2::annotation_custom(tableGrob(mytable, rows=NULL,theme=tt2), xmin=-2., xmax=-0.5, ymin=-2.5, ymax=-0.99)
   gg
 }
 
