@@ -110,8 +110,8 @@ plot_spatial_verif <- function(
   
   plot.title <- sprintf("%s\n",paste(toupper(score_name),"Diagram",sep = " "), bdate, edate)
   gg <- gg + ggplot2::labs(title=plot.title, 
-                           subtitle = paste(" MODEL: ", myModel,"\n","PERIOD: ","from", bdate,"to", edate, "\n" ), 
-                           caption = paste("PARAMETER: ", myParam)) +
+                           subtitle = paste(" Model: ", myModel,"\n","Period: ","from", bdate,"to", edate, "\n" ), 
+                           caption = paste("Parameter: ", myParam)) +
              ggplot2::theme(plot.title = element_text(hjust = .5))
    
 
@@ -161,23 +161,23 @@ plot_sal <- function(plot_data) {
   tfam <- "mono"
   
   gg <- ggplot2::ggplot(plot_data, aes(x = S, y = A, colour = plot_data$L))
-  gg <- gg + ggplot2::geom_hline(yintercept = median(plot_data$A, na.rm=TRUE), linetype = "dashed",color = "#8c8c8c") +
-             ggplot2::geom_vline(xintercept = median(plot_data$S, na.rm=TRUE), linetype = "dashed", color = "#8c8c8c") +
-             #ggplot2::annotation_custom(tableGrob(mytable, rows=NULL,theme=tt1), xmin=-2., xmax=-0.5, ymin=-2.5, ymax=-0.99) +
-             ggplot2::annotate(geom = "rect", xmin = quantile(plot_data$S, probs=.25), xmax = quantile(plot_data$S, probs=.75), 
-                                              ymin = quantile(plot_data$A,probs=.25), ymax = quantile(plot_data$A,probs=.75), 
-                                              fill = "gray42", color = "gray70", alpha = 0.1) + 
-             #ggplot2::annotation_custom(tableGrob(mytable, rows=NULL,theme=tt1), xmin=-2., xmax=-0.5, ymin=-2.5, ymax=-0.99) +
-             ggplot2::geom_point(size=5) +
+  gg <- gg + ggplot2::geom_point(size=5) +
              ggplot2::xlim(-2, 2) + ggplot2::ylim(-2, 2) + 
              ggplot2::labs(y = "A", x = "S", colour="L") +
              ggplot2::scale_colour_gradient2(low = "darkblue", mid = "yellow", high = "red") +
+
+             ggplot2::annotate(geom = "rect", xmin = quantile(plot_data$S, probs=.25), xmax = quantile(plot_data$S, probs=.75),
+                                              ymin = quantile(plot_data$A,probs=.25), ymax = quantile(plot_data$A,probs=.75),
+                                              fill = "gray42", color = "gray70", alpha = 0.1) +
+
              ggplot2::geom_text(aes(-1.2,2,label = medianS, family=tfam), size=tfsize*1.5, colour="black") + 
              ggplot2::geom_text(aes(-1.2,1.8,label = medianA, family=tfam), size=tfsize*1.5, colour="black") + 
              ggplot2::geom_text(aes(-1.215,1.6,label = medianL, family=tfam), size=tfsize*1.5, colour="black") + 
              ggplot2::geom_text(aes(1.211,-1.6,label = meanS, family=tfam), size=tfsize*1.5, colour="black") +  
              ggplot2::geom_text(aes(1.2,-1.8,label = meanA, family=tfam), size=tfsize*1.5, colour="black") +  
              ggplot2::geom_text(aes(1.2,-2,label = meanL, family=tfam), size=tfsize*1.5, colour="black")+ 
+             ggplot2::geom_hline(yintercept = median(plot_data$A, na.rm=TRUE), linetype = "dashed",color = "#8c8c8c") +
+             ggplot2::geom_vline(xintercept = median(plot_data$S, na.rm=TRUE), linetype = "dashed", color = "#8c8c8c") +
              ggplot2::annotation_custom(tableGrob(mytable, rows=NULL,theme=tt2), xmin=-2., xmax=-0.5, ymin=-2.5, ymax=-0.99)
   gg
 }
